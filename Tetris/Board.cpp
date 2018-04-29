@@ -10,6 +10,7 @@ Board::Board(int width, int height) : width(width), height(height), delay(1000),
 			blocks[h].push_back(nullptr);
 		}
 	}
+	nextBlockType = (BlockType)(rand() % 7);
 	initializeTetromino();
 }
 
@@ -21,27 +22,20 @@ void Board::newTurn()
 }
 
 void Board::initializeTetromino(){
-	BlockType type = (BlockType)(rand() % 7);
-	activeTetromino = new Tetromino(type);
+	pair<Colour*, vector<int>> params = getBlockTypeParams(nextBlockType);
+	activeTetromino = new Tetromino(params.first, params.second);
 	activeTetromino->x = (width / 2);
 	activeTetromino->y = 0;
+	nextBlockType = (BlockType)(rand() % 7);
 }
 
 void Board::step()
 {
-	int x = activeTetromino->x;
-	int y = activeTetromino->y;
-	if (any_of(
-		activeTetromino->blocks.begin(),
-		activeTetromino->blocks.end(),
-		[this, x, y](Block* block) 
-			{ if (y + block->y + 1 == height) return true; 
-			  else return blocks[y + block->y + 1][x + block->x] != nullptr; }))
+	activeTetromino->y++;
+	if (this->outOfBounds() || this->collidesWithBlock())
 	{
+		activeTetromino->y--;
 		updateBoard();
-	}
-	else {
-		activeTetromino->y++;
 	}
 }
 
@@ -59,6 +53,8 @@ void Board::deconstructTetromino()
 		block->x += activeTetromino->x;
 		block->y += activeTetromino->y;
 		blocks[block->y][block->x] = block;
+		block->x = 0;
+		block->y = 0;
 	}
 	activeTetromino->~Tetromino();
 }
@@ -72,16 +68,13 @@ void Board::deleteFullRows() {
 	}
 
 	for (int i = rowsToDelete.size() - 1; i >= 0; i--) {
-		blocks.erase(blocks.begin() + i);
-		blocks.insert(blocks.begin(), vector<Block*>());
-		for (int j = 0; j < width; j++) blocks[0].push_back(nullptr);
+		blocks.erase(blocks.begin() + rowsToDelete[i]);
+	}
 
-		/*for (int k = i; k > 0; k--)
-			for (int m = 0; m < width; m++) {
-				if (blocks[k][m] != nullptr) {
-					blocks[k][m]->y += 1;
-				}
-			}*/
+	for (int i = 0; i < rowsToDelete.size(); i++) {
+		vector<Block*> newVec = vector<Block*>();
+		for (int j = 0; j < width; j++) newVec.push_back(nullptr);
+		blocks.insert(blocks.begin(), newVec);
 	}
 }
 
@@ -90,6 +83,104 @@ void Board::checkForLoss() {
 		any_of(blocks[1].begin(), blocks[1].end(), [](Block* block) { return block != nullptr; }))
 		gameOver = true;
 }
+
+void Board::rotateClockwise() {
+	this->activeTetromino->rotateClockwise();
+	if (outOfBounds() || collidesWithBlock())
+		this->activeTetromino->rotateCounterClockwise();
+
+}
+
+
+void Board::rotateCounterClockwise() {
+	this->activeTetromino->rotateCounterClockwise();
+	if (outOfBounds() || collidesWithBlock())
+		this->activeTetromino->rotateClockwise();
+}
+
+
+void Board::moveLeft() {
+	activeTetromino->x--;
+	if (outOfBounds() || collidesWithBlock())
+		activeTetromino->x++;
+}
+
+
+void Board::moveRight() {
+	activeTetromino->x++;
+	if (outOfBounds() || collidesWithBlock())
+		activeTetromino->x--;
+}
+
+bool Board::outOfBounds() {
+	return (activeTetromino->maxX() >= width ||activeTetromino->minX() < 0 ||
+			activeTetromino->maxY() >= height || activeTetromino->minY() < 0);
+}
+
+bool Board::collidesWithBlock() {
+	int x = activeTetromino->x;
+	int y = activeTetromino->y;
+	return (any_of(
+		activeTetromino->blocks.begin(),
+		activeTetromino->blocks.end(),
+		[this, x, y](Block* block)
+	{ return blocks[y + block->y][x + block->x] != nullptr; }));
+}
+
+pair<Colour*, vector<int>> Board::getBlockTypeParams(BlockType type) {
+	Colour* col;
+	vector<int> coords;
+	switch (type)
+	{
+		// 0 0 0 0
+		// 1 1 1 1
+	case I:
+		col = new Colour(0, 255, 255);
+		coords = { -1, 0, 0, 0, 1, 0, 2, 0 };
+		break;
+		// 1 1
+		// 1 1
+	case O:
+		col = new Colour(255, 0, 255);
+		coords = { 0, 0, 1, 0, 0, 1, 1, 1 };
+		break;
+		// 0 1 0 
+		// 1 1 1 
+	case T:
+		col = new Colour(139, 0, 139);
+		coords = { 0, -1, -1, 0, 0, 0, 1, 0 };
+		break;
+		// 0 1 1 
+		// 1 1 0 
+	case S:
+		col = new Colour(0, 255, 0);
+		coords = { 0, -1, -1, 0, 0, 0, 1, -1 };
+		break;
+		// 1 1 0 
+		// 0 1 1 
+	case Z:
+		col = new Colour(255, 0, 0);
+		coords = { 0, -1, -1, -1, 0, 0, 1, 0 };
+		break;
+		// 1 0 0 
+		// 1 1 1 
+	case J:
+		col = new Colour(0, 0, 255);
+		coords = { -1, -1, -1, 0, 0, 0, 1, 0 };
+		break;
+		// 0 0 1 
+		// 1 1 1 
+	case L:
+		col = new Colour(255, 165, 0);
+		coords = { 1, -1, -1, 0, 0, 0, 1, 0 };
+		break;
+	default:
+		col = nullptr;
+		break;
+	}
+	return make_pair(col, coords);
+}
+
 
 Board::~Board()
 {

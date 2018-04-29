@@ -9,6 +9,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE , LPTSTR cmdLine, int cmdSh
 
 void Tetris::Window_Open(Win::Event& e)
 {
+	srand(time(NULL));
 	board = new Board(boardWidth, boardHeight);
 	stopWatch.Start();
 	lastTime = stopWatch.GetSeconds();
@@ -18,26 +19,10 @@ void Tetris::Window_Open(Win::Event& e)
 bool Tetris::RenderScene(CG::Gdi& gdi)
 {
 	double currentTime = stopWatch.GetSeconds();
-	if (currentTime - lastTime >= (board->delay) / 1000) {
+	double frameDelta = currentTime - lastTime;
+	if (frameDelta >= (board->delay) / 1000) {
 		board->step();
 		lastTime = currentTime;
-	}
-	//______________ Update the game
-	if (keyboard[VK_RIGHT] && board->activeTetromino->x + board->activeTetromino->maxX() + 1 < boardWidth )
-	{
-		x += tetrominoMoveSpeed * deltaSec;
-	}
-	if (keyboard[VK_LEFT] && board->activeTetromino->x + board->activeTetromino->minX() > 0)
-	{
-		x -= tetrominoMoveSpeed * deltaSec;
-	}
-	if (keyboard[VK_DOWN] && board->activeTetromino->y + board->activeTetromino->maxY() + 1 < boardHeight)
-	{
-		y += tetrominoMoveSpeed * deltaSec;
-	}
-	if (keyboard[VK_UP])
-	{
-		r += (tetrominoMoveSpeed / 2) * deltaSec;
 	}
 
 	if (x <= -cellSize) {
@@ -49,13 +34,8 @@ bool Tetris::RenderScene(CG::Gdi& gdi)
 		x = 0;
 	}
 	if (y >= cellSize) {
-		board->activeTetromino->y += 1;
+		board->step();
 		y = 0;
-	}
-	if (r > cellSize)
-	{
-		board->activeTetromino->rotateClockwise();
-		r = 0;
 	}
 	// if (keyboard['A'])
 	//{
@@ -75,12 +55,15 @@ bool Tetris::RenderScene(CG::Gdi& gdi)
 	wchar_t text[32];
 	_snwprintf_s(text, 32, _TRUNCATE, L"%d", framesPerSecond);
 	gdi.TextOut(0, 0, text);
+	_snwprintf_s(text, 32, _TRUNCATE, L"Next Block:");
+	gdi.TextOut(padding + (boardWidth * cellSize) + 3, padding + (2 * cellSize), text);
+	drawNextTetromino(gdi, padding + (boardWidth * cellSize) + 10, padding + (2 * cellSize) + 30);
 	return true; // return false to stop
 }
 
 void Tetris::drawBoard(CG::Gdi& gdi) {
 	CG::Brush brush(RGB(20, 20, 20));
-	RECT rect = { padding, padding, padding + (boardWidth * cellSize), padding + (boardHeight * cellSize) };
+	RECT rect = { padding, padding + (2 * cellSize), padding + (boardWidth * cellSize), padding + (boardHeight * cellSize) };
 	gdi.FillRect(rect, brush);
 
 	CG::Brush brush2(RGB(90, 90, 90));
@@ -88,12 +71,12 @@ void Tetris::drawBoard(CG::Gdi& gdi) {
 	for (int w = 0; w < boardWidth + 1; w++) {
 		RECT line = { 
 			padding + (w * cellSize) - half,
-			padding - half,
+			padding + (2 * cellSize) - half,
 			padding + (w * cellSize) + half, 
 			padding + (boardHeight * cellSize) + half };
 		gdi.FillRect(line, brush2);
 	}
-	for (int h = 0; h < boardHeight + 1; h++) {
+	for (int h = 2; h < boardHeight + 1; h++) {
 		RECT line = { 
 			padding - half, 
 			padding + (h * cellSize) - half, 
@@ -104,40 +87,60 @@ void Tetris::drawBoard(CG::Gdi& gdi) {
 
 }
 
+void Tetris::drawBorderedBox(CG::Gdi& gdi, int xOffset, int yOffset, int width, int height, int halfOfLineWidth, Colour* colour) {
+	RECT outline = {
+		xOffset,
+		yOffset,
+		xOffset + width,
+		yOffset + height
+	};
+	CG::Brush brushOutline(RGB(colour->red / 2, colour->green / 2, colour->blue / 2));
+	gdi.FillRect(outline, brushOutline);
+
+	int half = gridLineWidth / 2;
+	RECT fill = {
+		xOffset + halfOfLineWidth,
+		yOffset + halfOfLineWidth,
+		xOffset + width - halfOfLineWidth,
+		yOffset + height - halfOfLineWidth
+	};
+	CG::Brush brushFill(RGB(colour->red, colour->green, colour->blue));
+	gdi.FillRect(fill, brushFill);
+
+}
+
 void Tetris::drawBlocks(CG::Gdi& gdi) {
 	for (int h = 2; h < boardHeight; h++) {
 		for (int w = 0; w < boardWidth; w++) {
 			if (board->blocks[h][w] != nullptr)
-				drawBlock(gdi, board->blocks[h][w]);
+				drawBlock(gdi, board->blocks[h][w], w, h);
 		}
 	}
 }
 
 void Tetris::drawTetromino(CG::Gdi& gdi) {
 	for (int i = 0; i < 4; i++) {
-		drawBlock(gdi, (*board->activeTetromino)[i], board->activeTetromino->x, board->activeTetromino->y);
+		Block* block = (*board->activeTetromino)[i];
+		if (board->activeTetromino->y + block->y >= 2)
+			drawBlock(gdi, block, board->activeTetromino->x + block->x, board->activeTetromino->y + block->y);
 	}
 }
 
-void Tetris::drawBlock(CG::Gdi& gdi, Block* block, int offsetX, int offsetY) {
-	RECT outline = {
-		padding + ((offsetX + block->x) * cellSize),
-		padding + ((offsetY + block->y) * cellSize),
-		padding + ((offsetX + block->x) * cellSize) + cellSize,
-		padding + ((offsetY + block->y) * cellSize) + cellSize
-	};
-	CG::Brush brushOutline(RGB(block->colour->red / 2, block->colour->green / 2, block->colour->blue / 2));
-	gdi.FillRect(outline, brushOutline);
+void Tetris::drawNextTetromino(CG::Gdi& gdi, int x, int y) {
+	BlockType toDraw = board->nextBlockType;
+	pair<Colour*, vector<int>> params = board->getBlockTypeParams(toDraw);
+	int width = cellSize / 2;
+	for (int i = 0; i < 8; i += 2) {
+		int blockX = params.second[i] + 1;
+		int blockY = params.second[i + 1] + 1;
+		int width = cellSize / 2;
+		drawBorderedBox(gdi, x + (blockX * width), y + (blockY * width), width, width, 1, params.first);
+	}
+}
 
+void Tetris::drawBlock(CG::Gdi& gdi, Block* block, int x, int y) {
 	int half = gridLineWidth / 2;
-	RECT fill = {
-		padding + ((offsetX + block->x) * cellSize) + half,
-		padding + ((offsetY + block->y) * cellSize) + half,
-		padding + ((offsetX + block->x) * cellSize) + cellSize - half,
-		padding + ((offsetY + block->y) * cellSize) + cellSize - half
-	};
-	CG::Brush brushFill(RGB(block->colour->red, block->colour->green, block->colour->blue));
-	gdi.FillRect(fill, brushFill);
+	drawBorderedBox(gdi, padding + (x * cellSize), padding + (y * cellSize), cellSize, cellSize, half, block->colour);
 }
 
 //void Tetris::Window_Size(Win::Event& e)
@@ -146,31 +149,31 @@ void Tetris::drawBlock(CG::Gdi& gdi, Block* block, int offsetX, int offsetY) {
 //	// Use this->width and this->height
 //}
 
-//void Tetris::Window_KeyDown(Win::Event& e)
-//{
-//	switch (e.wParam)
-//	{
-//	case VK_SHIFT:
-//		break;
-//	case VK_UP:
-//		break;
-//	case 'A':
-//		break;
-//	}
-//}
+void Tetris::Window_KeyDown(Win::Event& e)
+{
+	switch (e.wParam)
+	{
+	case VK_RIGHT:
+		board->moveRight();
+		break;
+	case VK_LEFT:
+		board->moveLeft();
+		break;
+	case VK_DOWN:
+		board->step();
+		break;
+	}
+}
 
-//void Tetris::Window_KeyUp(Win::Event& e)
-//{
-//	switch (e.wParam)
-//	{
-//	case VK_SHIFT:
-//		break;
-//	case VK_UP:
-//		break;
-//	case 'A':
-//		break;
-//	}
-//}
+void Tetris::Window_KeyUp(Win::Event& e)
+{
+	switch (e.wParam)
+	{
+	case VK_UP:
+		board->rotateClockwise();
+		break;
+	}
+}
 
 //void Tetris::Window_LButtonDown(Win::Event& e)
 //{

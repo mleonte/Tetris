@@ -15,6 +15,7 @@ public:
 	int turns;
 	int score;
 	bool gameOver;
+	BlockType nextBlockType;
 
 	void newTurn();
 	void initializeTetromino();
@@ -23,6 +24,13 @@ public:
 	void deconstructTetromino();
 	void deleteFullRows();
 	void checkForLoss();
+	void rotateClockwise();
+	void rotateCounterClockwise();
+	void moveLeft();
+	void moveRight();
+	bool outOfBounds();
+	bool collidesWithBlock();
+	pair<Colour*, vector<int>> getBlockTypeParams(BlockType type);
 	~Board();
 };
 

@@ -17,12 +17,11 @@ struct Block
 
 class Tetromino {
 public:
-	Tetromino(BlockType type);
+	Tetromino(Colour* colour, vector<int> coords);
 
 	std::vector<Block*> blocks;
 	int x;
 	int y;
-	BlockType type;
 
 	void initializeBlocks(std::vector<int>, Colour*);
 	void rotateClockwise();

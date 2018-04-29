@@ -25,9 +25,11 @@ public:
 	Board* board;
 	bool RenderScene(CG::Gdi& gdi);
 	void drawBoard(CG::Gdi& gdi);
+	void drawBorderedBox(CG::Gdi & gdi, int xOffset, int yOffset, int width, int height, int halfOfLineWidth, Colour* colour);
 	void drawBlocks(CG::Gdi & gdi);
 	void drawTetromino(CG::Gdi & gdi);
-	void drawBlock(CG::Gdi & gdi, Block * block, int offsetX = 0, int offsetY = 0);
+	void drawNextTetromino(CG::Gdi & gdi, int x, int y);
+	void drawBlock(CG::Gdi & gdi, Block * block, int x, int y);
 	const wchar_t * GetClassName(){return L"Tetris";}
 protected:
 	//______ Wintempla GUI manager section begin: DO NOT EDIT AFTER THIS LINE
@@ -35,8 +37,8 @@ protected:
 	{
 		this->Text = L"Tetris";
 	}
-	//void Window_KeyDown(Win::Event& e);
-	//void Window_KeyUp(Win::Event& e);
+	void Window_KeyDown(Win::Event& e);
+	void Window_KeyUp(Win::Event& e);
 	//void Window_LButtonDown(Win::Event& e);
 	//void Window_LButtonUp(Win::Event& e);
 	//void Window_MouseMove(Win::Event& e);
