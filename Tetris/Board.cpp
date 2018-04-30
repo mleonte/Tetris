@@ -4,14 +4,7 @@
 
 Board::Board(int width, int height) : width(width), height(height), delay(1000), gameOver(false)
 {
-	for (int h = 0; h < height; h++) {
-		blocks.push_back(vector<Block*>());
-		for (int w = 0; w < width; w++) {
-			blocks[h].push_back(nullptr);
-		}
-	}
-	nextBlockType = (BlockType)(rand() % 7);
-	initializeTetromino();
+	reset();
 }
 
 
@@ -25,7 +18,7 @@ void Board::initializeTetromino(){
 	pair<Colour*, vector<int>> params = getBlockTypeParams(nextBlockType);
 	activeTetromino = new Tetromino(params.first, params.second);
 	activeTetromino->x = (width / 2);
-	activeTetromino->y = 0;
+	activeTetromino->y = 1;
 	nextBlockType = (BlockType)(rand() % 7);
 }
 
@@ -72,6 +65,7 @@ void Board::deleteFullRows() {
 	}
 
 	for (int i = 0; i < rowsToDelete.size(); i++) {
+		score += pow(1000, 1 + (i * 0.05));
 		vector<Block*> newVec = vector<Block*>();
 		for (int j = 0; j < width; j++) newVec.push_back(nullptr);
 		blocks.insert(blocks.begin(), newVec);
@@ -179,6 +173,20 @@ pair<Colour*, vector<int>> Board::getBlockTypeParams(BlockType type) {
 		break;
 	}
 	return make_pair(col, coords);
+}
+
+void Board::reset() {
+	blocks = vector<vector<Block*>>();
+	for (int h = 0; h < height; h++) {
+		blocks.push_back(vector<Block*>());
+		for (int w = 0; w < width; w++) {
+			blocks[h].push_back(nullptr);
+		}
+	}
+	nextBlockType = (BlockType)(rand() % 7);
+	initializeTetromino();
+	score = 0;
+	gameOver = false;
 }
 
 

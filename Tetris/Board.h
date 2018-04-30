@@ -30,6 +30,7 @@ public:
 	void moveRight();
 	bool outOfBounds();
 	bool collidesWithBlock();
+	void reset();
 	pair<Colour*, vector<int>> getBlockTypeParams(BlockType type);
 	~Board();
 };

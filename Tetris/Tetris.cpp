@@ -18,46 +18,45 @@ void Tetris::Window_Open(Win::Event& e)
 
 bool Tetris::RenderScene(CG::Gdi& gdi)
 {
-	double currentTime = stopWatch.GetSeconds();
-	double frameDelta = currentTime - lastTime;
-	if (frameDelta >= (board->delay) / 1000) {
-		board->step();
-		lastTime = currentTime;
+	wchar_t text[64];
+	if (board->gameOver) {
+		_snwprintf_s(text, 64, _TRUNCATE, L"You lose!  Press enter to play again.");
+		gdi.TextOut(90, 100, text);
 	}
+	else {
+		double currentTime = stopWatch.GetSeconds();
+		double frameDelta = currentTime - lastTime;
+		if (frameDelta >= (board->delay) / 1000) {
+			if (!paused)
+				board->step();
+			lastTime = currentTime;
+		}
 
-	if (x <= -cellSize) {
-		board->activeTetromino->x -= 1;
-		x = 0;
-	}
-	else if (x >= cellSize) {
-		board->activeTetromino->x += 1;
-		x = 0;
-	}
-	if (y >= cellSize) {
-		board->step();
-		y = 0;
-	}
-	// if (keyboard['A'])
-	//{
-	//	::PlaySound(MAKEINTRESOURCE(IDR_MYSOUND), hInstance, SND_RESOURCE | SND_ASYNC);
-	// }
+		// if (keyboard['A'])
+		//{
+		//	::PlaySound(MAKEINTRESOURCE(IDR_MYSOUND), hInstance, SND_RESOURCE | SND_ASYNC);
+		// }
 
-	//____________________________________________ Paint Window Background
-	CG::Brush brush(RGB(100, 100, 255));
-	RECT rect = {0, 0, width, height};
-	gdi.FillRect(rect, brush);
-	drawBoard(gdi);
-	drawBlocks(gdi);
-	drawTetromino(gdi);
-	//____________________________________________ Paint Small Circle
-	gdi.Circle((int)x, 20, 10);
-	//____________________________________________ Display FPS
-	wchar_t text[32];
-	_snwprintf_s(text, 32, _TRUNCATE, L"%d", framesPerSecond);
-	gdi.TextOut(0, 0, text);
-	_snwprintf_s(text, 32, _TRUNCATE, L"Next Block:");
-	gdi.TextOut(padding + (boardWidth * cellSize) + 3, padding + (2 * cellSize), text);
-	drawNextTetromino(gdi, padding + (boardWidth * cellSize) + 10, padding + (2 * cellSize) + 30);
+		//____________________________________________ Paint Window Background
+		CG::Brush brush(RGB(100, 100, 255));
+		RECT rect = { 0, 0, width, height };
+		gdi.FillRect(rect, brush);
+		drawBoard(gdi);
+		drawBlocks(gdi);
+		drawTetromino(gdi);
+		//____________________________________________ Display FPS
+		
+		_snwprintf_s(text, 32, _TRUNCATE, L"%d", framesPerSecond);
+		gdi.TextOut(0, 0, text);
+		_snwprintf_s(text, 32, _TRUNCATE, L"Hit space to pause");
+		gdi.TextOut(35, 0, text);
+		_snwprintf_s(text, 32, _TRUNCATE, L"Next Block:");
+		gdi.TextOut(padding + (boardWidth * cellSize) + 3, padding + (2 * cellSize), text);
+		drawNextTetromino(gdi, padding + (boardWidth * cellSize) + 10, padding + (2 * cellSize) + 30);
+
+		_snwprintf_s(text, 32, _TRUNCATE, L"Score: %d", board->score);
+		gdi.TextOut(padding + 3, padding + (boardHeight * cellSize) + 3, text);
+	}
 	return true; // return false to stop
 }
 
@@ -151,27 +150,33 @@ void Tetris::drawBlock(CG::Gdi& gdi, Block* block, int x, int y) {
 
 void Tetris::Window_KeyDown(Win::Event& e)
 {
-	switch (e.wParam)
-	{
-	case VK_RIGHT:
-		board->moveRight();
-		break;
-	case VK_LEFT:
-		board->moveLeft();
-		break;
-	case VK_DOWN:
-		board->step();
-		break;
+	if (!paused && !board->gameOver) {
+		switch (e.wParam)
+		{
+		case VK_RIGHT:
+			board->moveRight();
+			break;
+		case VK_LEFT:
+			board->moveLeft();
+			break;
+		case VK_DOWN:
+			board->step();
+			break;
+		}
 	}
+	if (e.wParam == VK_SPACE) paused = !paused;
+	if (e.wParam == VK_RETURN && board->gameOver) board->reset();
 }
 
 void Tetris::Window_KeyUp(Win::Event& e)
 {
-	switch (e.wParam)
-	{
-	case VK_UP:
-		board->rotateClockwise();
-		break;
+	if (!paused && !board->gameOver) {
+		switch (e.wParam)
+		{
+		case VK_UP:
+			board->rotateClockwise();
+			break;
+		}
 	}
 }
 

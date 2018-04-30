@@ -16,6 +16,7 @@ public:
 	float y;
 	float r;
 	double lastTime;
+	bool paused = false;
 	int cellSize = 30;
 	int boardWidth = 10;
 	int boardHeight = 20;
